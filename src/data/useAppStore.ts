@@ -11,6 +11,7 @@ interface PersistedShape {
   notes: Note[];
   notifications: Notification[];
   userName: string;
+  skinId: string;
 }
 
 interface AppState extends PersistedShape {
@@ -37,7 +38,7 @@ interface AppState extends PersistedShape {
     sectionId: string,
     data: { title: string; content: string; color: AccentColor },
   ) => string;
-  updateNote: (id: string, patch: Partial<Pick<Note, "title" | "content" | "color">>) => void;
+  updateNote: (id: string, patch: Partial<Pick<Note, "title" | "content" | "color" | "drawing">>) => void;
   toggleStar: (id: string) => void;
   archiveNote: (id: string) => void;
   unarchiveNote: (id: string) => void;
@@ -51,6 +52,7 @@ interface AppState extends PersistedShape {
   markAllNotificationsRead: () => void;
 
   setUserName: (name: string) => void;
+  setSkin: (skinId: string) => void;
   resetAllData: () => void;
 }
 
@@ -61,6 +63,7 @@ function persistedSlice(s: PersistedShape): PersistedShape {
     notes: s.notes,
     notifications: s.notifications,
     userName: s.userName,
+    skinId: s.skinId,
   };
 }
 
@@ -73,6 +76,7 @@ export const useAppStore = create<AppState>((set, get) => {
     notes: [],
     notifications: [],
     userName: "Ucok",
+    skinId: "mist",
     hydrated: false,
     view: { kind: "workspace", workspaceId: "" },
     returnView: null,
@@ -92,6 +96,7 @@ export const useAppStore = create<AppState>((set, get) => {
         );
         set({
           ...persisted,
+          skinId: persisted.skinId ?? "mist",
           notes,
           hydrated: true,
           view: { kind: "workspace", workspaceId: persisted.workspaces[0].id },
@@ -271,6 +276,11 @@ export const useAppStore = create<AppState>((set, get) => {
 
     setUserName: (name) => {
       set({ userName: name });
+      save();
+    },
+
+    setSkin: (skinId) => {
+      set({ skinId });
       save();
     },
 

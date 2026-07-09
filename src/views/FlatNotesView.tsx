@@ -21,7 +21,7 @@ export function FlatNotesView({ title, subtitle, notes, emptyLabel, mode, extraA
   const setView = useAppStore((s) => s.setView);
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-8">
+    <div className="h-full overflow-y-auto px-5 py-8">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-semibold text-slate-800">{title}</h1>
         {extraAction && notes.length > 0 && (

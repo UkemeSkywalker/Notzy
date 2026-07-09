@@ -47,7 +47,7 @@ export function WorkspaceView({ workspaceId }: { workspaceId: string }) {
   if (!workspace) return null;
 
   return (
-    <div className="h-full overflow-y-auto px-8 pb-8 pt-5">
+    <div className="h-full overflow-y-auto px-5 pb-8 pt-5">
       <div className="drag mb-4 flex items-center justify-between">
         <h1 className="text-[19px] font-semibold text-slate-800">{workspace.name}</h1>
         <div className="no-drag flex items-center gap-2">

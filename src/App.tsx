@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useAppStore } from "./data/useAppStore";
+import { getSkin } from "./data/skins";
 import { Sidebar } from "./components/Sidebar";
 import { WorkspaceView } from "./views/WorkspaceView";
 import { NotePage } from "./views/NotePage";
@@ -13,6 +14,7 @@ function App() {
   const view = useAppStore((s) => s.view);
   const notes = useAppStore((s) => s.notes);
   const emptyTrash = useAppStore((s) => s.emptyTrash);
+  const skin = getSkin(useAppStore((s) => s.skinId));
 
   useEffect(() => {
     void hydrate();
@@ -86,10 +88,15 @@ function App() {
   }
 
   return (
-    <div className="notzy-bg flex h-screen w-screen items-center justify-center p-5">
+    <div
+      className="flex h-screen w-screen items-center justify-center p-5"
+      style={{ background: skin.bg }}
+    >
       <div className="flex h-full w-full overflow-hidden rounded-2xl border border-white/60 shadow-2xl">
         <Sidebar />
-        <div className="flex-1 bg-[#f1f2f4]/95 backdrop-blur-2xl">{content}</div>
+        <div className="flex-1 backdrop-blur-2xl" style={{ background: skin.main }}>
+          {content}
+        </div>
       </div>
     </div>
   );

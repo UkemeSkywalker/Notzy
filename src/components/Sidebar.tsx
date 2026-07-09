@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAppStore } from "../data/useAppStore";
+import { getSkin } from "../data/skins";
 import type { ViewId, Workspace } from "../types";
-import { PromptModal } from "./PromptModal";
 
 const WORKSPACE_TILE_COLORS = ["bg-emerald-500", "bg-orange-500", "bg-amber-500", "bg-violet-500", "bg-sky-500", "bg-rose-500"];
 
@@ -77,9 +77,24 @@ export function Sidebar() {
   const setView = useAppStore((s) => s.setView);
   const addWorkspace = useAppStore((s) => s.addWorkspace);
   const notifications = useAppStore((s) => s.notifications);
+  const skin = getSkin(useAppStore((s) => s.skinId));
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+
+  const cancelNewWorkspace = () => {
+    setCreatingWorkspace(false);
+    setNewWorkspaceName("");
+  };
+
+  const commitNewWorkspace = () => {
+    const name = newWorkspaceName.trim();
+    if (!name) return cancelNewWorkspace();
+    const id = addWorkspace(name, "📁");
+    setView({ kind: "workspace", workspaceId: id });
+    cancelNewWorkspace();
+  };
 
   useEffect(() => {
     if (workspaces.length && expanded.size === 0) {
@@ -111,7 +126,10 @@ export function Sidebar() {
   };
 
   return (
-    <div className="drag flex h-full w-64 shrink-0 flex-col border-r border-black/[0.06] bg-white/85 pt-9 backdrop-blur-2xl">
+    <div
+      className="drag flex h-full w-64 shrink-0 flex-col border-r border-black/[0.06] pt-9 backdrop-blur-2xl"
+      style={{ background: skin.sidebar }}
+    >
       <div className="no-drag flex-1 overflow-y-auto px-3 pb-3">
         <div className="mb-4 flex flex-col gap-0.5">
           <NavRow
@@ -218,14 +236,43 @@ export function Sidebar() {
             active={isActive({ kind: "all" })}
             onClick={() => setView({ kind: "all" })}
           />
-          <button
-            type="button"
-            onClick={() => setCreatingWorkspace(true)}
-            className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-medium text-slate-400 hover:bg-black/[0.04] hover:text-slate-600"
-          >
-            <Plus size={15} />
-            New workspace
-          </button>
+          {creatingWorkspace ? (
+            <div className="flex items-center gap-1.5 rounded-lg bg-black/[0.04] py-1 pl-2.5 pr-1">
+              <Plus size={15} className="shrink-0 text-slate-400" />
+              <input
+                autoFocus
+                value={newWorkspaceName}
+                placeholder="Workspace name"
+                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitNewWorkspace();
+                  if (e.key === "Escape") cancelNewWorkspace();
+                }}
+                onBlur={cancelNewWorkspace}
+                className="w-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-slate-700 outline-none placeholder:font-normal placeholder:text-slate-300"
+              />
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  commitNewWorkspace();
+                }}
+                disabled={!newWorkspaceName.trim()}
+                className="shrink-0 rounded-md bg-slate-900 px-2 py-0.5 text-[11.5px] font-medium text-white disabled:opacity-30"
+              >
+                Add
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCreatingWorkspace(true)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-medium text-slate-400 hover:bg-black/[0.04] hover:text-slate-600"
+            >
+              <Plus size={15} />
+              New workspace
+            </button>
+          )}
         </div>
 
         <div className="mb-1.5 px-1 text-[12px] font-medium text-slate-400">Recent Notes</div>
@@ -243,19 +290,6 @@ export function Sidebar() {
           ))}
         </div>
       </div>
-
-      {creatingWorkspace && (
-        <PromptModal
-          title="New workspace"
-          placeholder="Workspace name"
-          confirmLabel="Create"
-          onConfirm={(name) => {
-            const id = addWorkspace(name, "📁");
-            setView({ kind: "workspace", workspaceId: id });
-          }}
-          onClose={() => setCreatingWorkspace(false)}
-        />
-      )}
 
     </div>
   );

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { MoreHorizontal, Star } from "lucide-react";
+import { Brush, MoreHorizontal, Star } from "lucide-react";
 import type { Note } from "../types";
 import { formatRelative } from "../utils/time";
 import { htmlToPreview } from "../utils/richtext";
@@ -73,7 +73,10 @@ export function NoteCard({
       <p className="flex-1 overflow-hidden whitespace-pre-line text-[12.5px] leading-relaxed text-slate-500 line-clamp-5">
         {preview || "No content"}
       </p>
-      <div className="mt-2 text-[11px] text-slate-400">{formatRelative(note.updatedAt)}</div>
+      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400">
+        {formatRelative(note.updatedAt)}
+        {!!note.drawing?.length && <Brush size={11} className="text-slate-300" />}
+      </div>
     </div>
   );
 }

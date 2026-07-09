@@ -8,7 +8,7 @@ export function NotificationsView() {
   const markAllNotificationsRead = useAppStore((s) => s.markAllNotificationsRead);
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-8">
+    <div className="h-full overflow-y-auto px-5 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-[22px] font-semibold text-slate-800">Notifications</h1>
         {notifications.some((n) => !n.read) && (

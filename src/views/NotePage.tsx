@@ -9,8 +9,10 @@ import Placeholder from "@tiptap/extension-placeholder";
 import {
   ArrowLeft,
   Bold,
+  Brush,
   ChevronRight,
   Code,
+  PenLine,
   Heading1,
   Heading2,
   Heading3,
@@ -30,6 +32,7 @@ import {
 import { useAppStore } from "../data/useAppStore";
 import type { AccentColor, ViewId } from "../types";
 import { formatRelative } from "../utils/time";
+import { ScribbleCanvas } from "../components/ScribbleCanvas";
 
 const COLORS: { id: AccentColor; className: string }[] = [
   { id: "red", className: "bg-rose-400" },
@@ -182,13 +185,15 @@ export function NotePage({ noteId }: { noteId: string }) {
   const restoreNote = useAppStore((s) => s.restoreNote);
 
   const [title, setTitle] = useState(note?.title ?? "");
+  const [scribbleMode, setScribbleMode] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<{ title?: string; content?: string } | null>(null);
   const readOnly = !!note?.trashed;
 
-  // Reset local title when navigating between notes.
+  // Reset local title/scribble mode when navigating between notes.
   useEffect(() => {
     setTitle(useAppStore.getState().notes.find((n) => n.id === noteId)?.title ?? "");
+    setScribbleMode(false);
   }, [noteId]);
 
   const goBack = useCallback(() => {
@@ -255,7 +260,7 @@ export function NotePage({ noteId }: { noteId: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="drag flex items-center justify-between px-8 pb-2 pt-5">
+      <div className="drag flex items-center justify-between px-5 pb-2 pt-5">
         <div className="no-drag flex min-w-0 items-center gap-1.5 text-[13px] text-slate-500">
           <button
             type="button"
@@ -283,7 +288,19 @@ export function NotePage({ noteId }: { noteId: string }) {
 
         <div className="no-drag flex shrink-0 items-center gap-1">
           <span className="mr-2 text-[12px] text-slate-400">Edited {formatRelative(note.updatedAt)}</span>
-          {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setScribbleMode((v) => !v)}
+            className={`mr-1 flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12.5px] font-medium transition ${
+              scribbleMode
+                ? "bg-slate-900 text-white hover:bg-slate-700"
+                : "border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            {scribbleMode ? <PenLine size={13} /> : <Brush size={13} />}
+            {scribbleMode ? "Back to writing" : "Scribble mode"}
+          </button>
+          {!readOnly && !scribbleMode && (
             <div className="mr-1 flex items-center gap-1.5">
               {COLORS.map((c) => (
                 <button
@@ -333,37 +350,47 @@ export function NotePage({ noteId }: { noteId: string }) {
         </div>
       </div>
 
-      <div className="no-drag flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[760px] px-8 pb-16">
-          <div className={`mb-6 h-1 w-12 rounded-full ${ACCENT_BAR[note.color]}`} />
-          <input
-            value={title}
+      {scribbleMode ? (
+        <div className="no-drag min-h-0 flex-1">
+          <ScribbleCanvas
+            value={note.drawing ?? []}
+            onChange={(drawing) => updateNote(note.id, { drawing })}
             readOnly={readOnly}
-            placeholder="Untitled"
-            onChange={(e) => {
-              setTitle(e.target.value);
-              scheduleSave({ title: e.target.value });
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                editor.commands.focus("start");
-              }
-            }}
-            className="mb-4 w-full bg-transparent text-[32px] font-bold leading-tight text-slate-900 outline-none placeholder:text-slate-300"
           />
-          {readOnly ? (
-            <div className="mb-5 rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] text-amber-700">
-              This note is in the Trash. Restore it to continue editing.
-            </div>
-          ) : (
-            <div className="sticky top-0 z-10 mb-5">
-              <Toolbar editor={editor} />
-            </div>
-          )}
-          <EditorContent editor={editor} className="note-editor" />
         </div>
-      </div>
+      ) : (
+        <div className="no-drag flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-[920px] px-6 pb-16">
+            <div className={`mb-6 h-1 w-12 rounded-full ${ACCENT_BAR[note.color]}`} />
+            <input
+              value={title}
+              readOnly={readOnly}
+              placeholder="Untitled"
+              onChange={(e) => {
+                setTitle(e.target.value);
+                scheduleSave({ title: e.target.value });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  editor.commands.focus("start");
+                }
+              }}
+              className="mb-4 w-full bg-transparent text-[32px] font-bold leading-tight text-slate-900 outline-none placeholder:text-slate-300"
+            />
+            {readOnly ? (
+              <div className="mb-5 rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] text-amber-700">
+                This note is in the Trash. Restore it to continue editing.
+              </div>
+            ) : (
+              <div className="sticky top-0 z-10 mb-5">
+                <Toolbar editor={editor} />
+              </div>
+            )}
+            <EditorContent editor={editor} className="note-editor" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
