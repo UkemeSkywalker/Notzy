@@ -42,6 +42,32 @@ body {
   -webkit-app-region: drag;
 }
 
+/* pdf.js selectable text layer (transparent text positioned over the canvas) */
+.pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: transparent;
+  z-index: 20;
+}
+
+.pdf-text-layer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+.pdf-text-layer span::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: transparent;
+}
+
 /* Rich text editor (TipTap / ProseMirror) */
 .note-editor .ProseMirror {
   outline: none;
@@ -157,4 +183,126 @@ body {
   background:
     radial-gradient(ellipse 90% 70% at 25% 0%, rgba(255, 255, 255, 0.85), transparent 65%),
     linear-gradient(170deg, #e8ebee 0%, #dde3e6 30%, #c9d3d2 60%, #a9b8b2 85%, #8fa39b 100%);
+}
+
+/* Markdown preview (imported .md files) */
+.md-preview {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: #334155;
+  word-wrap: break-word;
+}
+
+.md-preview > * + * {
+  margin-top: 0.5em;
+}
+
+.md-preview h1 {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 1.1em;
+}
+
+.md-preview h2 {
+  font-size: 1.3em;
+  font-weight: 650;
+  color: #0f172a;
+  margin-top: 1em;
+}
+
+.md-preview h3,
+.md-preview h4,
+.md-preview h5,
+.md-preview h6 {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #1e293b;
+  margin-top: 0.9em;
+}
+
+.md-preview ul,
+.md-preview ol {
+  padding-left: 1.4em;
+}
+
+.md-preview ul {
+  list-style: disc;
+}
+
+.md-preview ol {
+  list-style: decimal;
+}
+
+.md-preview li + li {
+  margin-top: 0.15em;
+}
+
+.md-preview blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 0.9em;
+  color: #64748b;
+}
+
+.md-preview code {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+  font-family: "SF Mono", ui-monospace, monospace;
+}
+
+.md-preview pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 0.8em 1em;
+  overflow-x: auto;
+}
+
+.md-preview pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.md-preview a {
+  color: #0284c7;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md-preview hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.2em 0;
+}
+
+.md-preview img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.md-preview table {
+  border-collapse: collapse;
+  font-size: 0.95em;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.md-preview th,
+.md-preview td {
+  border: 1px solid #e2e8f0;
+  padding: 0.35em 0.7em;
+  text-align: left;
+}
+
+.md-preview th {
+  background: rgba(0, 0, 0, 0.03);
+  font-weight: 600;
+}
+
+.md-preview input[type="checkbox"] {
+  margin-right: 0.4em;
 }

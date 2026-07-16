@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { v4 as uuid } from "uuid";
-import type { AccentColor, Note, Notification, Section, ViewId, Workspace } from "../types";
+import type { AccentColor, Note, Notification, PdfAttachment, Section, ViewId, Workspace } from "../types";
 import { buildSeed } from "./seed";
 import { loadPersisted, persist } from "./persistence";
 import { isHtmlContent, plainToHtml } from "../utils/richtext";
@@ -36,9 +36,17 @@ interface AppState extends PersistedShape {
   addNote: (
     workspaceId: string,
     sectionId: string,
-    data: { title: string; content: string; color: AccentColor },
+    data: { title: string; content: string; color: AccentColor; pdf?: PdfAttachment; markdown?: string },
   ) => string;
-  updateNote: (id: string, patch: Partial<Pick<Note, "title" | "content" | "color" | "drawing">>) => void;
+  updateNote: (
+    id: string,
+    patch: Partial<
+      Pick<
+        Note,
+        "title" | "content" | "color" | "drawing" | "pdfHighlights" | "pdfBookmarks" | "pageMargins" | "markdown"
+      >
+    >,
+  ) => void;
   toggleStar: (id: string) => void;
   archiveNote: (id: string) => void;
   unarchiveNote: (id: string) => void;
@@ -201,6 +209,8 @@ export const useAppStore = create<AppState>((set, get) => {
         sectionId,
         title: data.title,
         content: data.content,
+        pdf: data.pdf,
+        markdown: data.markdown,
         color: data.color,
         starred: false,
         archived: false,

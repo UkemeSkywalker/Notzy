@@ -3,6 +3,7 @@ import { Brush, MoreHorizontal, Star } from "lucide-react";
 import type { Note } from "../types";
 import { formatRelative } from "../utils/time";
 import { htmlToPreview } from "../utils/richtext";
+import { markdownToPreview } from "./MarkdownViewer";
 import { Menu, MenuItem } from "./Menu";
 
 const BORDER_COLOR: Record<Note["color"], string> = {
@@ -35,7 +36,10 @@ export function NoteCard({
   onRestore,
   onDeletePermanently,
 }: NoteCardProps) {
-  const preview = useMemo(() => htmlToPreview(note.content), [note.content]);
+  const preview = useMemo(
+    () => (note.markdown != null ? markdownToPreview(note.markdown) : htmlToPreview(note.content)),
+    [note.markdown, note.content],
+  );
   return (
     <div
       onClick={onOpen}
@@ -76,6 +80,9 @@ export function NoteCard({
       <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400">
         {formatRelative(note.updatedAt)}
         {!!note.drawing?.length && <Brush size={11} className="text-slate-300" />}
+        {note.pdf && (
+          <span className="rounded bg-red-50 px-1 py-px text-[9px] font-bold tracking-wide text-red-500">PDF</span>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,8 @@ import {
   Brush,
   ChevronRight,
   Code,
+  Eye,
+  FileCode,
   PenLine,
   Heading1,
   Heading2,
@@ -30,9 +32,18 @@ import {
   Undo2,
 } from "lucide-react";
 import { useAppStore } from "../data/useAppStore";
-import type { AccentColor, ViewId } from "../types";
+import type { AccentColor, PageMargins, ViewId } from "../types";
 import { formatRelative } from "../utils/time";
 import { ScribbleCanvas } from "../components/ScribbleCanvas";
+import { PdfViewer } from "../components/PdfViewer";
+import { MarkdownViewer } from "../components/MarkdownViewer";
+import {
+  DEFAULT_PAGE_MARGINS,
+  HorizontalRuler,
+  PAGE_MIN_HEIGHT,
+  PAGE_WIDTH,
+  VerticalRuler,
+} from "../components/PageRulers";
 
 const COLORS: { id: AccentColor; className: string }[] = [
   { id: "red", className: "bg-rose-400" },
@@ -187,13 +198,28 @@ export function NotePage({ noteId }: { noteId: string }) {
   const [title, setTitle] = useState(note?.title ?? "");
   const [scribbleMode, setScribbleMode] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingPatch = useRef<{ title?: string; content?: string } | null>(null);
+  const pendingPatch = useRef<{ title?: string; content?: string; markdown?: string } | null>(null);
   const readOnly = !!note?.trashed;
+  const isMd = note?.markdown != null;
+  const [mdMode, setMdMode] = useState<"preview" | "raw">("preview");
+
+  /* Page margins, live while dragging a ruler marker, persisted on release. */
+  const [margins, setMargins] = useState<PageMargins>(note?.pageMargins ?? DEFAULT_PAGE_MARGINS);
+  const commitMargins = useCallback(
+    (m: PageMargins) => updateNote(noteId, { pageMargins: m }),
+    [noteId, updateNote],
+  );
+  const [guide, setGuide] = useState<{ x?: number | null; y?: number | null }>({});
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const [sheetHeight, setSheetHeight] = useState(PAGE_MIN_HEIGHT);
 
   // Reset local title/scribble mode when navigating between notes.
   useEffect(() => {
-    setTitle(useAppStore.getState().notes.find((n) => n.id === noteId)?.title ?? "");
+    const fresh = useAppStore.getState().notes.find((n) => n.id === noteId);
+    setTitle(fresh?.title ?? "");
     setScribbleMode(false);
+    setMdMode("preview");
+    setMargins(fresh?.pageMargins ?? DEFAULT_PAGE_MARGINS);
   }, [noteId]);
 
   const goBack = useCallback(() => {
@@ -204,7 +230,7 @@ export function NotePage({ noteId }: { noteId: string }) {
   }, [note, returnView, setView]);
 
   const scheduleSave = useCallback(
-    (patch: { title?: string; content?: string }) => {
+    (patch: { title?: string; content?: string; markdown?: string }) => {
       pendingPatch.current = { ...pendingPatch.current, ...patch };
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
@@ -230,6 +256,15 @@ export function NotePage({ noteId }: { noteId: string }) {
     },
     [noteId, readOnly],
   );
+
+  // Track the sheet's height so the vertical ruler always spans it.
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setSheetHeight(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [editor, scribbleMode, note?.pdf]);
 
   // Flush any pending save when leaving the page or switching notes.
   useEffect(() => {
@@ -288,6 +323,24 @@ export function NotePage({ noteId }: { noteId: string }) {
 
         <div className="no-drag flex shrink-0 items-center gap-1">
           <span className="mr-2 text-[12px] text-slate-400">Edited {formatRelative(note.updatedAt)}</span>
+          {isMd && (
+            <div className="mr-1 flex items-center rounded-lg border border-black/10 bg-white p-0.5">
+              {(["preview", "raw"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMdMode(m)}
+                  className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-medium transition ${
+                    mdMode === m ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-black/5"
+                  }`}
+                >
+                  {m === "preview" ? <Eye size={12} /> : <FileCode size={12} />}
+                  {m === "preview" ? "Preview" : "Markdown"}
+                </button>
+              ))}
+            </div>
+          )}
+          {!note.pdf && !isMd && (
           <button
             type="button"
             onClick={() => setScribbleMode((v) => !v)}
@@ -300,6 +353,7 @@ export function NotePage({ noteId }: { noteId: string }) {
             {scribbleMode ? <PenLine size={13} /> : <Brush size={13} />}
             {scribbleMode ? "Back to writing" : "Scribble mode"}
           </button>
+          )}
           {!readOnly && !scribbleMode && (
             <div className="mr-1 flex items-center gap-1.5">
               {COLORS.map((c) => (
@@ -350,7 +404,21 @@ export function NotePage({ noteId }: { noteId: string }) {
         </div>
       </div>
 
-      {scribbleMode ? (
+      {note.pdf ? (
+        <div className="no-drag flex min-h-0 flex-1 flex-col px-6 pb-4">
+          <input
+            value={title}
+            readOnly={readOnly}
+            placeholder="Untitled"
+            onChange={(e) => {
+              setTitle(e.target.value);
+              scheduleSave({ title: e.target.value });
+            }}
+            className="mb-2 w-full bg-transparent text-[24px] font-bold leading-tight text-slate-900 outline-none placeholder:text-slate-300"
+          />
+          <PdfViewer note={note} readOnly={readOnly} onUpdate={(patch) => updateNote(note.id, patch)} />
+        </div>
+      ) : scribbleMode ? (
         <div className="no-drag min-h-0 flex-1">
           <ScribbleCanvas
             value={note.drawing ?? []}
@@ -359,35 +427,98 @@ export function NotePage({ noteId }: { noteId: string }) {
           />
         </div>
       ) : (
-        <div className="no-drag flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[920px] px-6 pb-16">
-            <div className={`mb-6 h-1 w-12 rounded-full ${ACCENT_BAR[note.color]}`} />
-            <input
-              value={title}
-              readOnly={readOnly}
-              placeholder="Untitled"
-              onChange={(e) => {
-                setTitle(e.target.value);
-                scheduleSave({ title: e.target.value });
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  editor.commands.focus("start");
-                }
-              }}
-              className="mb-4 w-full bg-transparent text-[32px] font-bold leading-tight text-slate-900 outline-none placeholder:text-slate-300"
-            />
-            {readOnly ? (
-              <div className="mb-5 rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] text-amber-700">
-                This note is in the Trash. Restore it to continue editing.
+        <div className="no-drag flex min-h-0 flex-1 flex-col">
+          {readOnly && (
+            <div className="mx-auto mb-2 rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] text-amber-700">
+              This note is in the Trash. Restore it to continue editing.
+            </div>
+          )}
+          {/* Document canvas: neutral backdrop, centered paper sheet, rulers. */}
+          <div className="min-h-0 flex-1 overflow-auto rounded-t-xl bg-slate-500/[0.13]">
+            <div className="mx-auto w-max px-8 pb-16 pt-2">
+              {!readOnly && !isMd && (
+                <div className="sticky top-2 z-20 mb-1.5" style={{ width: PAGE_WIDTH }}>
+                  <Toolbar editor={editor} />
+                </div>
+              )}
+              <div className="sticky z-10" style={{ width: PAGE_WIDTH, top: readOnly || isMd ? 8 : 52 }}>
+                <HorizontalRuler
+                  margins={margins}
+                  disabled={readOnly}
+                  onChange={setMargins}
+                  onCommit={commitMargins}
+                  onGuide={(x) => setGuide((g) => ({ ...g, x }))}
+                />
               </div>
-            ) : (
-              <div className="sticky top-0 z-10 mb-5">
-                <Toolbar editor={editor} />
+              <div className="relative mt-1.5">
+                <div className="absolute -left-6 top-0">
+                  <VerticalRuler
+                    height={sheetHeight}
+                    margins={margins}
+                    disabled={readOnly}
+                    onChange={setMargins}
+                    onCommit={commitMargins}
+                    onGuide={(y) => setGuide((g) => ({ ...g, y }))}
+                  />
+                </div>
+                <div
+                  ref={sheetRef}
+                  onClick={(e) => {
+                    // Clicking bare paper (margins / below the text) puts the caret at the end.
+                    if (e.target === e.currentTarget && !readOnly && !isMd) editor.commands.focus("end");
+                  }}
+                  className="relative rounded-[3px] bg-[#fffefb] shadow-[0_1px_2px_rgba(15,23,42,0.10),0_12px_32px_rgba(15,23,42,0.14)] ring-1 ring-black/[0.06]"
+                  style={{
+                    width: PAGE_WIDTH,
+                    minHeight: PAGE_MIN_HEIGHT,
+                    paddingTop: margins.top,
+                    paddingLeft: margins.left,
+                    paddingRight: margins.right,
+                    paddingBottom: 96,
+                  }}
+                >
+                  {typeof guide.x === "number" && (
+                    <div
+                      className="pointer-events-none absolute inset-y-0 z-10 border-l border-dashed border-sky-400"
+                      style={{ left: guide.x }}
+                    />
+                  )}
+                  {typeof guide.y === "number" && (
+                    <div
+                      className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-sky-400"
+                      style={{ top: guide.y }}
+                    />
+                  )}
+                  <div className={`mb-5 h-1 w-12 rounded-full ${ACCENT_BAR[note.color]}`} />
+                  <input
+                    value={title}
+                    readOnly={readOnly}
+                    placeholder="Untitled"
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      scheduleSave({ title: e.target.value });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        editor.commands.focus("start");
+                      }
+                    }}
+                    className="mb-3 w-full bg-transparent text-[28px] font-bold leading-tight text-slate-900 outline-none placeholder:text-slate-300"
+                  />
+                  {isMd ? (
+                    <MarkdownViewer
+                      markdown={note.markdown ?? ""}
+                      mode={mdMode}
+                      readOnly={readOnly}
+                      onChange={(markdown) => scheduleSave({ markdown })}
+                    />
+                  ) : (
+                    <EditorContent editor={editor} className="note-editor" />
+                  )}
+                </div>
               </div>
-            )}
-            <EditorContent editor={editor} className="note-editor" />
+            </div>
           </div>
         </div>
       )}

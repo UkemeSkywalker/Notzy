@@ -53,6 +53,39 @@ export interface ImageObject {
 
 export type DrawObject = StrokeObject | ShapeObject | ImageObject | TextObject;
 
+export interface PdfAttachment {
+  name: string;
+  dataUrl: string;
+  pages: number;
+}
+
+export interface PdfHighlight {
+  id: string;
+  /** 1-based page number. */
+  page: number;
+  /** Rects normalized to the page box (0..1), so they hold at any zoom. */
+  rects: { x: number; y: number; w: number; h: number }[];
+  color: string;
+  /** Excerpt of the highlighted text, for the annotations panel. */
+  snippet: string;
+  note?: string;
+  createdAt: number;
+}
+
+export interface PdfBookmark {
+  id: string;
+  /** 1-based page number. */
+  page: number;
+  label?: string;
+  createdAt: number;
+}
+
+export interface PageMargins {
+  top: number;
+  left: number;
+  right: number;
+}
+
 export interface Note {
   id: string;
   workspaceId: string;
@@ -60,6 +93,13 @@ export interface Note {
   title: string;
   content: string;
   drawing?: DrawObject[];
+  /** Raw markdown source for imported .md files; rendered in preview mode. */
+  markdown?: string;
+  /** Document margins in px (96 dpi), adjustable via the page rulers. */
+  pageMargins?: PageMargins;
+  pdf?: PdfAttachment;
+  pdfHighlights?: PdfHighlight[];
+  pdfBookmarks?: PdfBookmark[];
   color: AccentColor;
   starred: boolean;
   archived: boolean;
