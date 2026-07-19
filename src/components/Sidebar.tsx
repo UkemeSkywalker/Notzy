@@ -11,6 +11,7 @@ import {
   Leaf,
   Megaphone,
   MessageSquare,
+  Pencil,
   Plus,
   Settings,
   Star,
@@ -76,12 +77,56 @@ export function Sidebar() {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
   const addWorkspace = useAppStore((s) => s.addWorkspace);
+  const renameWorkspace = useAppStore((s) => s.renameWorkspace);
+  const updateNote = useAppStore((s) => s.updateNote);
   const notifications = useAppStore((s) => s.notifications);
   const skin = getSkin(useAppStore((s) => s.skinId));
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [renaming, setRenaming] = useState<{ kind: "workspace" | "note"; id: string; value: string } | null>(null);
+
+  const commitRename = () => {
+    if (!renaming) return;
+    const name = renaming.value.trim();
+    if (name) {
+      if (renaming.kind === "workspace") renameWorkspace(renaming.id, name);
+      else updateNote(renaming.id, { title: name });
+    }
+    setRenaming(null);
+  };
+
+  const renameInput = (
+    <input
+      autoFocus
+      value={renaming?.value ?? ""}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => renaming && setRenaming({ ...renaming, value: e.target.value })}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commitRename();
+        if (e.key === "Escape") setRenaming(null);
+      }}
+      onBlur={commitRename}
+      onClick={(e) => e.stopPropagation()}
+      className="w-full min-w-0 flex-1 rounded bg-white/70 px-1 py-0.5 text-inherit outline-none ring-1 ring-sky-300"
+    />
+  );
+
+  const renamePencil = (kind: "workspace" | "note", id: string, value: string, label: string) => (
+    <span
+      role="button"
+      tabIndex={-1}
+      title={label}
+      onClick={(e) => {
+        e.stopPropagation();
+        setRenaming({ kind, id, value });
+      }}
+      className="hidden h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-black/10 hover:text-slate-600 group-hover:flex"
+    >
+      <Pencil size={11} />
+    </span>
+  );
 
   const cancelNewWorkspace = () => {
     setCreatingWorkspace(false);
@@ -206,7 +251,20 @@ export function Sidebar() {
                   <span className={`flex h-5 w-5 items-center justify-center rounded-[6px] ${tile}`}>
                     <Icon size={12} className="text-white" strokeWidth={2.5} />
                   </span>
-                  <span className="flex-1 truncate text-left">{ws.name}</span>
+                  {renaming?.kind === "workspace" && renaming.id === ws.id ? (
+                    renameInput
+                  ) : (
+                    <span
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setRenaming({ kind: "workspace", id: ws.id, value: ws.name });
+                      }}
+                      className="flex-1 truncate text-left"
+                    >
+                      {ws.name}
+                    </span>
+                  )}
+                  {renamePencil("workspace", ws.id, ws.name, "Rename workspace")}
                 </button>
                 {isOpen && (
                   <div className="ml-[26px] flex flex-col gap-0.5 pl-2">
@@ -218,10 +276,23 @@ export function Sidebar() {
                         key={note.id}
                         type="button"
                         onClick={() => setView({ kind: "note", noteId: note.id })}
-                        className="flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-[12.5px] text-slate-500 hover:bg-black/[0.04]"
+                        className="group flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-[12.5px] text-slate-500 hover:bg-black/[0.04]"
                       >
                         <FileText size={12} className="shrink-0 text-slate-300" />
-                        <span className="flex-1 truncate">{note.title}</span>
+                        {renaming?.kind === "note" && renaming.id === note.id ? (
+                          renameInput
+                        ) : (
+                          <span
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              setRenaming({ kind: "note", id: note.id, value: note.title });
+                            }}
+                            className="flex-1 truncate"
+                          >
+                            {note.title}
+                          </span>
+                        )}
+                        {renamePencil("note", note.id, note.title, "Rename note")}
                         {note.starred && <Star size={11} className="shrink-0 text-amber-400" fill="currentColor" />}
                       </button>
                     ))}
@@ -232,7 +303,7 @@ export function Sidebar() {
           })}
           <NavRow
             icon={<Layers size={15} className="text-slate-500" />}
-            label="Brows All"
+            label="Browse All"
             active={isActive({ kind: "all" })}
             onClick={() => setView({ kind: "all" })}
           />
@@ -282,9 +353,22 @@ export function Sidebar() {
               key={note.id}
               type="button"
               onClick={() => setView({ kind: "note", noteId: note.id })}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-[5px] text-left text-[13px] text-slate-600 hover:bg-black/[0.04]"
+              className="group flex items-center gap-1.5 rounded-lg px-2.5 py-[5px] text-left text-[13px] text-slate-600 hover:bg-black/[0.04]"
             >
-              <span className="flex-1 truncate">{note.title}</span>
+              {renaming?.kind === "note" && renaming.id === note.id ? (
+                renameInput
+              ) : (
+                <span
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setRenaming({ kind: "note", id: note.id, value: note.title });
+                  }}
+                  className="flex-1 truncate"
+                >
+                  {note.title}
+                </span>
+              )}
+              {renamePencil("note", note.id, note.title, "Rename note")}
               {note.starred && <Star size={12} className="shrink-0 text-amber-400" fill="currentColor" />}
             </button>
           ))}

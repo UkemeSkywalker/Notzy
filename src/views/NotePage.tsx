@@ -222,6 +222,15 @@ export function NotePage({ noteId }: { noteId: string }) {
     setMargins(fresh?.pageMargins ?? DEFAULT_PAGE_MARGINS);
   }, [noteId]);
 
+  // Pick up renames made elsewhere (e.g. the sidebar) while this note is open;
+  // guarded so it never clobbers a title edit that hasn't been saved yet.
+  useEffect(() => {
+    if (note && note.title !== title && pendingPatch.current?.title === undefined) {
+      setTitle(note.title);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.title]);
+
   const goBack = useCallback(() => {
     const fallback: ViewId = note
       ? { kind: "workspace", workspaceId: note.workspaceId }

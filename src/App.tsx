@@ -40,7 +40,7 @@ function App() {
     case "all":
       content = (
         <FlatNotesView
-          title="Brows All"
+          title="Browse All"
           notes={notes.filter((n) => !n.trashed && !n.archived)}
           emptyLabel="No notes yet."
           mode="starred"
