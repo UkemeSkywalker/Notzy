@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useAppStore } from "./data/useAppStore";
+import { isTauri, openStickyWindow } from "./stickyWindows";
 import { getSkin } from "./data/skins";
 import { Sidebar } from "./components/Sidebar";
 import { WorkspaceView } from "./views/WorkspaceView";
@@ -20,6 +21,13 @@ function App() {
     void hydrate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Put every open sticky back on the desktop once per launch.
+  useEffect(() => {
+    if (!hydrated || !isTauri()) return;
+    const open = useAppStore.getState().notes.filter((n) => n.sticky?.open && !n.trashed);
+    open.forEach((n) => void openStickyWindow(n));
+  }, [hydrated]);
 
   if (!hydrated) {
     return (

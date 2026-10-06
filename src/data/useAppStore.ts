@@ -44,7 +44,15 @@ interface AppState extends PersistedShape {
     patch: Partial<
       Pick<
         Note,
-        "title" | "content" | "color" | "drawing" | "pdfHighlights" | "pdfBookmarks" | "pageMargins" | "markdown"
+        | "title"
+        | "content"
+        | "color"
+        | "drawing"
+        | "pdfHighlights"
+        | "pdfBookmarks"
+        | "pageMargins"
+        | "markdown"
+        | "sticky"
       >
     >,
   ) => void;

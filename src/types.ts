@@ -86,6 +86,33 @@ export interface PageMargins {
   right: number;
 }
 
+/** Desktop sticky-note window state for a note. */
+export interface StickyMeta {
+  /** Whether the sticky window should be on the desktop. */
+  open: boolean;
+  /** Window geometry in logical pixels. */
+  x?: number;
+  y?: number;
+  w: number;
+  h: number;
+  /** Always-on-top. */
+  pinned: boolean;
+  /** Rolled up to just the title bar. */
+  collapsed?: boolean;
+  /** Height to restore when un-collapsing. */
+  restoreH?: number;
+  /** Paper opacity 0.55–1. */
+  opacity?: number;
+  /** Content font scale, 1 = default. */
+  fontScale?: number;
+  /** Visible on all macOS Spaces. */
+  allSpaces?: boolean;
+  /** Show the drawing canvas instead of text. */
+  scribble?: boolean;
+  /** Epoch ms for a reminder notification. */
+  reminderAt?: number;
+}
+
 export interface Note {
   id: string;
   workspaceId: string;
@@ -95,6 +122,8 @@ export interface Note {
   drawing?: DrawObject[];
   /** Raw markdown source for imported .md files; rendered in preview mode. */
   markdown?: string;
+  /** Present when the note has (or had) a desktop sticky window. */
+  sticky?: StickyMeta;
   /** Document margins in px (96 dpi), adjustable via the page rulers. */
   pageMargins?: PageMargins;
   pdf?: PdfAttachment;

@@ -306,3 +306,65 @@ body {
 .md-preview input[type="checkbox"] {
   margin-right: 0.4em;
 }
+
+/* Desktop sticky notes */
+.sticky-editor .ProseMirror {
+  outline: none;
+  min-height: 100%;
+  font-size: inherit;
+  line-height: 1.55;
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.sticky-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: rgba(15, 23, 42, 0.3);
+  pointer-events: none;
+}
+
+.sticky-editor .ProseMirror > * + * {
+  margin-top: 0.35em;
+}
+
+.sticky-editor .ProseMirror ul,
+.sticky-editor .ProseMirror ol {
+  padding-left: 1.3em;
+}
+
+.sticky-editor .ProseMirror ul {
+  list-style: disc;
+}
+
+.sticky-editor .ProseMirror ol {
+  list-style: decimal;
+}
+
+.sticky-editor .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+
+.sticky-editor .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.45em;
+}
+
+.sticky-editor .ProseMirror ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-top: 0.15em;
+}
+
+.sticky-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.sticky-editor .ProseMirror code {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 3px;
+  padding: 0.05em 0.3em;
+  font-size: 0.9em;
+  font-family: "SF Mono", ui-monospace, monospace;
+}
