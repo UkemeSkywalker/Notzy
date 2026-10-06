@@ -27,6 +27,7 @@ import {
   RotateCcw,
   Star,
   Strikethrough,
+  ImagePlus,
   TextQuote,
   Trash2,
   Underline as UnderlineIcon,
@@ -37,6 +38,7 @@ import type { AccentColor, PageMargins, ViewId } from "../types";
 import { formatRelative } from "../utils/time";
 import { ScribbleCanvas } from "../components/ScribbleCanvas";
 import { PdfViewer } from "../components/PdfViewer";
+import { NoteImage, insertImageFiles } from "../editor/NoteImage";
 import { MarkdownViewer } from "../components/MarkdownViewer";
 import { DEFAULT_STICKY, closeStickyWindow, openStickyWindow } from "../stickyWindows";
 import {
@@ -95,6 +97,7 @@ function ToolButton({
 }
 
 function Toolbar({ editor }: { editor: Editor }) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-black/[0.06] bg-white px-1.5 py-1 shadow-sm">
       <ToolButton title="Undo (⌘Z)" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}>
@@ -182,6 +185,22 @@ function Toolbar({ editor }: { editor: Editor }) {
       >
         <TextQuote size={14} />
       </ToolButton>
+      <span className="mx-1 h-4 w-px bg-black/10" />
+      <ToolButton title="Insert image (or paste / drop one)" onClick={() => imageInputRef.current?.click()}>
+        <ImagePlus size={14} />
+      </ToolButton>
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) void insertImageFiles(editor, files);
+          e.target.value = "";
+        }}
+      />
     </div>
   );
 }
@@ -261,6 +280,7 @@ export function NotePage({ noteId }: { noteId: string }) {
         TaskList,
         TaskItem.configure({ nested: true }),
         Placeholder.configure({ placeholder: "Write something…" }),
+        NoteImage,
       ],
       content: note?.content || "<p></p>",
       onUpdate: ({ editor: e }) => scheduleSave({ content: e.getHTML() }),
