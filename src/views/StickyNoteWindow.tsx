@@ -4,11 +4,11 @@ import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Pin, X } from "lucide-react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { ChevronDown, ChevronUp, Pin, X } from "lucide-react";
+import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore } from "../data/useAppStore";
 import { flushPersist } from "../data/persistence";
-import { isTauri } from "../stickyWindows";
+import { COLLAPSED_H, isTauri } from "../stickyWindows";
 import type { AccentColor, Note, StickyMeta } from "../types";
 
 /** Classic sticky-paper backgrounds keyed by the note's accent color. */
@@ -91,10 +91,31 @@ function StickyBody({ note }: { note: Note }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id]);
 
-  /** Frameless window: the header drags it (buttons excluded). */
+  /** Roll the sticky up to just its title bar, or back down. */
+  const toggleCollapse = async () => {
+    const cur = useAppStore.getState().notes.find((n) => n.id === note.id)?.sticky;
+    if (!cur) return;
+    const win = isTauri() ? getCurrentWindow() : null;
+    if (cur.collapsed) {
+      const h = cur.restoreH ?? cur.h;
+      patchSticky({ collapsed: false, h });
+      await win?.setResizable(true);
+      await win?.setSize(new LogicalSize(cur.w, h));
+    } else {
+      patchSticky({ collapsed: true, restoreH: cur.h });
+      await win?.setSize(new LogicalSize(cur.w, COLLAPSED_H));
+      await win?.setResizable(false);
+    }
+  };
+
+  /**
+   * Frameless window: the header drags it (buttons excluded). A drag swallows
+   * the native dblclick, so a second press is detected via e.detail instead.
+   */
   const onHeaderMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
-    if (isTauri()) void getCurrentWindow().startDragging();
+    if (e.detail === 2) void toggleCollapse();
+    else if (isTauri()) void getCurrentWindow().startDragging();
   };
 
   /** Closing a sticky takes it off the desktop; the note stays in the app. */
@@ -135,6 +156,16 @@ function StickyBody({ note }: { note: Note }) {
             />
           ))}
         </div>
+        <button
+          type="button"
+          title={note.sticky?.collapsed ? "Expand" : "Roll up (or double-click the header)"}
+          onClick={() => void toggleCollapse()}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-black/35 transition hover:bg-black/10 hover:text-black/70 ${
+            note.sticky?.collapsed ? "" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          {note.sticky?.collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+        </button>
         <button
           type="button"
           title={note.sticky?.pinned ? "Unpin (normal stacking)" : "Pin: float above all windows"}
