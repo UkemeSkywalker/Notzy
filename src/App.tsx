@@ -1,5 +1,7 @@
 import { useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "./data/useAppStore";
+import { createDesktopSticky, isTauri, openStickyWindow } from "./stickyWindows";
 import { getSkin } from "./data/skins";
 import { Sidebar } from "./components/Sidebar";
 import { WorkspaceView } from "./views/WorkspaceView";
@@ -19,6 +21,22 @@ function App() {
   useEffect(() => {
     void hydrate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Put every open sticky back on the desktop once per launch.
+  useEffect(() => {
+    if (!hydrated || !isTauri()) return;
+    const open = useAppStore.getState().notes.filter((n) => n.sticky?.open && !n.trashed);
+    open.forEach((n) => void openStickyWindow(n));
+  }, [hydrated]);
+
+  // The tray menu (and global hotkey) ask this window, even hidden, for a new sticky.
+  useEffect(() => {
+    if (!isTauri()) return;
+    const un = listen("notzy://new-sticky", () => createDesktopSticky());
+    return () => {
+      void un.then((f) => f());
+    };
   }, []);
 
   if (!hydrated) {

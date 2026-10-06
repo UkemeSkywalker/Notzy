@@ -22,6 +22,7 @@ import {
   List,
   ListOrdered,
   ListTodo,
+  Pin,
   Redo2,
   RotateCcw,
   Star,
@@ -37,6 +38,7 @@ import { formatRelative } from "../utils/time";
 import { ScribbleCanvas } from "../components/ScribbleCanvas";
 import { PdfViewer } from "../components/PdfViewer";
 import { MarkdownViewer } from "../components/MarkdownViewer";
+import { DEFAULT_STICKY, closeStickyWindow, openStickyWindow } from "../stickyWindows";
 import {
   DEFAULT_PAGE_MARGINS,
   HorizontalRuler,
@@ -275,6 +277,13 @@ export function NotePage({ noteId }: { noteId: string }) {
     return () => ro.disconnect();
   }, [editor, scribbleMode, note?.pdf]);
 
+  // Pick up content edited in another window (e.g. this note's desktop sticky),
+  // unless the user is typing here or has an unsaved change.
+  useEffect(() => {
+    if (!editor || !note || editor.isFocused || pendingPatch.current?.content !== undefined) return;
+    if (editor.getHTML() !== note.content) editor.commands.setContent(note.content || "<p></p>", false);
+  }, [editor, note?.content]);
+
   // Flush any pending save when leaving the page or switching notes.
   useEffect(() => {
     return () => {
@@ -332,6 +341,30 @@ export function NotePage({ noteId }: { noteId: string }) {
 
         <div className="no-drag flex shrink-0 items-center gap-1">
           <span className="mr-2 text-[12px] text-slate-400">Edited {formatRelative(note.updatedAt)}</span>
+          {!note.pdf && note.markdown == null && !readOnly && (
+            <button
+              type="button"
+              title={note.sticky?.open ? "Remove from desktop" : "Pin to desktop as a sticky note"}
+              onClick={() => {
+                if (note.sticky?.open) {
+                  updateNote(note.id, { sticky: { ...note.sticky, open: false } });
+                  void closeStickyWindow(note.id);
+                } else {
+                  const meta = { ...DEFAULT_STICKY, ...(note.sticky ?? {}), open: true };
+                  updateNote(note.id, { sticky: meta });
+                  void openStickyWindow({ ...note, sticky: meta });
+                }
+              }}
+              className={`mr-1 flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12.5px] font-medium transition ${
+                note.sticky?.open
+                  ? "bg-amber-400 text-amber-950 hover:bg-amber-300"
+                  : "border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <Pin size={13} />
+              {note.sticky?.open ? "On desktop" : "Stick to desktop"}
+            </button>
+          )}
           {isMd && (
             <div className="mr-1 flex items-center rounded-lg border border-black/10 bg-white p-0.5">
               {(["preview", "raw"] as const).map((m) => (
