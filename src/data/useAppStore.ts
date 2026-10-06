@@ -3,6 +3,7 @@ import { v4 as uuid } from "uuid";
 import type { AccentColor, Note, Notification, PdfAttachment, Section, ViewId, Workspace } from "../types";
 import { buildSeed } from "./seed";
 import { loadPersisted, persist } from "./persistence";
+import { broadcastState, onRemoteState, windowLabel } from "./sync";
 import { isHtmlContent, plainToHtml } from "../utils/richtext";
 
 interface PersistedShape {
@@ -76,7 +77,12 @@ function persistedSlice(s: PersistedShape): PersistedShape {
 }
 
 export const useAppStore = create<AppState>((set, get) => {
-  const save = () => persist(persistedSlice(get()));
+  const save = () => {
+    const slice = persistedSlice(get());
+    persist(slice);
+    // Keep other Notzy windows (sticky notes / main app) live-synced.
+    broadcastState(slice);
+  };
 
   return {
     workspaces: [],
@@ -91,6 +97,12 @@ export const useAppStore = create<AppState>((set, get) => {
     searchQuery: "",
 
     hydrate: async () => {
+      // Apply state saved by other windows. Persist it too (debounced, same
+      // content) so whichever window closes last still leaves fresh data on disk.
+      onRemoteState<PersistedShape>((remote) => {
+        set({ ...remote });
+        persist(remote);
+      });
       let persisted: PersistedShape | null = null;
       try {
         persisted = await loadPersisted<PersistedShape>();
@@ -110,6 +122,9 @@ export const useAppStore = create<AppState>((set, get) => {
           view: { kind: "workspace", workspaceId: persisted.workspaces[0].id },
         });
         if (notes.some((n, i) => n !== persisted!.notes[i])) save();
+      } else if (windowLabel().startsWith("sticky-")) {
+        // A sticky window must never seed demo data over the real store.
+        set({ hydrated: true });
       } else {
         const seed = buildSeed();
         set({
