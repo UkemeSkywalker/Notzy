@@ -1,8 +1,17 @@
+use std::str::FromStr;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::TrayIconBuilder,
     AppHandle, Emitter, Manager,
 };
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+const HOTKEY_NEW_STICKY: &str = "CmdOrCtrl+Alt+S";
+const HOTKEY_TOGGLE_STICKIES: &str = "CmdOrCtrl+Alt+H";
+
+fn is_hotkey(shortcut: &Shortcut, spec: &str) -> bool {
+    Shortcut::from_str(spec).map(|s| s == *shortcut).unwrap_or(false)
+}
 
 fn show_main(app: &AppHandle) {
     if let Some(main) = app.get_webview_window("main") {
@@ -36,9 +45,34 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| {
+                    if event.state() != ShortcutState::Pressed {
+                        return;
+                    }
+                    if is_hotkey(shortcut, HOTKEY_NEW_STICKY) {
+                        request_new_sticky(app);
+                    } else if is_hotkey(shortcut, HOTKEY_TOGGLE_STICKIES) {
+                        toggle_stickies(app);
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
-            let new_sticky = MenuItemBuilder::with_id("new-sticky", "New Sticky Note").build(app)?;
-            let toggle = MenuItemBuilder::with_id("toggle-stickies", "Show/Hide Stickies").build(app)?;
+            // System-wide: work even while Notzy is in the background. A combo
+            // already claimed by another app just fails to register.
+            for spec in [HOTKEY_NEW_STICKY, HOTKEY_TOGGLE_STICKIES] {
+                if let Err(err) = app.global_shortcut().register(spec) {
+                    eprintln!("could not register {spec}: {err}");
+                }
+            }
+            let new_sticky = MenuItemBuilder::with_id("new-sticky", "New Sticky Note")
+                .accelerator(HOTKEY_NEW_STICKY)
+                .build(app)?;
+            let toggle = MenuItemBuilder::with_id("toggle-stickies", "Show/Hide Stickies")
+                .accelerator(HOTKEY_TOGGLE_STICKIES)
+                .build(app)?;
             let open = MenuItemBuilder::with_id("open-notzy", "Open Notzy").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit Notzy").build(app)?;
             let menu = MenuBuilder::new(app)
