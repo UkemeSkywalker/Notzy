@@ -4,7 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
-import { X } from "lucide-react";
+import { Pin, X } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore } from "../data/useAppStore";
 import { flushPersist } from "../data/persistence";
@@ -135,6 +135,20 @@ function StickyBody({ note }: { note: Note }) {
             />
           ))}
         </div>
+        <button
+          type="button"
+          title={note.sticky?.pinned ? "Unpin (normal stacking)" : "Pin: float above all windows"}
+          onClick={() => {
+            const pinned = !note.sticky?.pinned;
+            patchSticky({ pinned });
+            if (isTauri()) void getCurrentWindow().setAlwaysOnTop(pinned);
+          }}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded transition hover:bg-black/10 hover:text-black/70 ${
+            note.sticky?.pinned ? "text-black/70" : "text-black/35 opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <Pin size={12} className={note.sticky?.pinned ? "fill-current" : ""} />
+        </button>
         <button
           type="button"
           title="Close (keeps the note in Notzy)"
