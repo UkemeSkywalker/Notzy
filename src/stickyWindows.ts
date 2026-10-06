@@ -42,6 +42,8 @@ export async function openStickyWindow(note: Note): Promise<void> {
     alwaysOnTop: meta.pinned,
     visibleOnAllWorkspaces: meta.allSpaces ?? false,
     skipTaskbar: true,
+    // Let dropped image files reach the editor instead of Tauri's file-drop handler.
+    dragDropEnabled: false,
     title: note.title || "Sticky note",
   });
 }

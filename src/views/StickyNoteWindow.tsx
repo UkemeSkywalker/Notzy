@@ -7,6 +7,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { ChevronDown, ChevronUp, Pin, X } from "lucide-react";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore } from "../data/useAppStore";
+import { NoteImage } from "../editor/NoteImage";
 import { flushPersist } from "../data/persistence";
 import { COLLAPSED_H, isTauri } from "../stickyWindows";
 import type { AccentColor, Note, StickyMeta } from "../types";
@@ -38,6 +39,7 @@ function StickyBody({ note }: { note: Note }) {
         TaskList,
         TaskItem.configure({ nested: true }),
         Placeholder.configure({ placeholder: "Jot something…" }),
+        NoteImage,
       ],
       content: note.content || "<p></p>",
       onUpdate: ({ editor: e }) => {

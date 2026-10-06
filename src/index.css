@@ -368,3 +368,41 @@ body {
   font-size: 0.9em;
   font-family: "SF Mono", ui-monospace, monospace;
 }
+
+/* Images in notes: block images that flow with the text */
+.note-image {
+  margin: 0.6em 0;
+  line-height: 0;
+}
+
+.note-image--center {
+  text-align: center;
+}
+
+.note-image--left {
+  float: left;
+  max-width: 60%;
+  margin: 0.25em 1.25em 0.6em 0;
+}
+
+.note-image--right {
+  float: right;
+  max-width: 60%;
+  margin: 0.25em 0 0.6em 1.25em;
+}
+
+.note-image.ProseMirror-selectednode {
+  outline: none;
+}
+
+/* Floated images must not spill past the end of the note. */
+.ProseMirror::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.sticky-editor .note-image--left,
+.sticky-editor .note-image--right {
+  max-width: 50%;
+}
