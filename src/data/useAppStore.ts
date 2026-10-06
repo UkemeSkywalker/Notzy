@@ -26,8 +26,9 @@ interface AppState extends PersistedShape {
   setView: (v: ViewId) => void;
   setSearchQuery: (q: string) => void;
 
-  addWorkspace: (name: string, icon: string) => string;
+  addWorkspace: (name: string, icon: string, color?: string) => string;
   renameWorkspace: (id: string, name: string) => void;
+  updateWorkspaceIcon: (id: string, icon: string, color: string) => void;
   deleteWorkspace: (id: string) => void;
 
   addSection: (workspaceId: string, name: string) => string;
@@ -157,10 +158,10 @@ export const useAppStore = create<AppState>((set, get) => {
       })),
     setSearchQuery: (q) => set({ searchQuery: q }),
 
-    addWorkspace: (name, icon) => {
+    addWorkspace: (name, icon, color) => {
       const id = uuid();
       const order = get().workspaces.length;
-      const workspace: Workspace = { id, name, icon, order };
+      const workspace: Workspace = { id, name, icon, color, order };
       const defaultSections: Section[] = [
         { id: uuid(), workspaceId: id, name: "Ideas", order: 0 },
         { id: uuid(), workspaceId: id, name: "Drafts", order: 1 },
@@ -175,6 +176,11 @@ export const useAppStore = create<AppState>((set, get) => {
 
     renameWorkspace: (id, name) => {
       set((s) => ({ workspaces: s.workspaces.map((w) => (w.id === id ? { ...w, name } : w)) }));
+      save();
+    },
+
+    updateWorkspaceIcon: (id, icon, color) => {
+      set((s) => ({ workspaces: s.workspaces.map((w) => (w.id === id ? { ...w, icon, color } : w)) }));
       save();
     },
 
