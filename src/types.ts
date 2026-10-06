@@ -3,7 +3,10 @@ export type AccentColor = "red" | "blue" | "green" | "purple" | "amber" | "slate
 export interface Workspace {
   id: string;
   name: string;
+  /** A key of WORKSPACE_ICONS, or an emoji. Older workspaces may hold "#" or "📁". */
   icon: string;
+  /** A key of WORKSPACE_COLORS; unset on older workspaces. */
+  color?: string;
   order: number;
 }
 

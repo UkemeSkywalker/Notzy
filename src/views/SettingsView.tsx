@@ -2,20 +2,22 @@ import { useState } from "react";
 import { Check, Pencil, Trash2 } from "lucide-react";
 import { useAppStore } from "../data/useAppStore";
 import { SKINS } from "../data/skins";
+import { WorkspaceTile } from "../components/WorkspaceIcon";
+import type { Workspace } from "../types";
 
 function WorkspaceRow({
-  name,
-  icon,
+  ws,
+  index,
   onRename,
   onDelete,
 }: {
-  name: string;
-  icon: string;
+  ws: Workspace;
+  index: number;
   onRename: (next: string) => void;
   onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(name);
+  const [value, setValue] = useState(ws.name);
 
   const commit = () => {
     const trimmed = value.trim();
@@ -37,8 +39,9 @@ function WorkspaceRow({
           className="flex-1 rounded-md border border-black/10 px-2 py-1 text-[13.5px] outline-none focus:border-slate-400"
         />
       ) : (
-        <span className="text-[13.5px] text-slate-700">
-          {icon} {name}
+        <span className="flex items-center gap-2 text-[13.5px] text-slate-700">
+          <WorkspaceTile ws={ws} index={index} />
+          {ws.name}
         </span>
       )}
       <div className="flex items-center gap-1">
@@ -130,11 +133,11 @@ export function SettingsView() {
       <section className="mb-8 max-w-md">
         <h2 className="mb-2 text-[13px] font-semibold text-slate-600">Workspaces</h2>
         <div className="flex flex-col gap-2">
-          {workspaces.map((ws) => (
+          {workspaces.map((ws, index) => (
             <WorkspaceRow
               key={ws.id}
-              name={ws.name}
-              icon={ws.icon}
+              ws={ws}
+              index={index}
               onRename={(next) => renameWorkspace(ws.id, next)}
               onDelete={() => {
                 if (confirm(`Delete "${ws.name}" and all its notes? This can't be undone.`)) {

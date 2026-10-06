@@ -5,32 +5,37 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
-  FolderOpen,
-  Hash,
   Layers,
-  Leaf,
-  Megaphone,
-  MessageSquare,
   Pencil,
   Plus,
   Settings,
   Star,
   Trash2,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useAppStore } from "../data/useAppStore";
 import { getSkin } from "../data/skins";
 import type { ViewId, Workspace } from "../types";
+import {
+  WORKSPACE_COLORS,
+  WORKSPACE_ICONS,
+  WorkspaceIconPicker,
+  WorkspaceTile,
+  defaultWorkspaceColor,
+  workspaceVisual,
+} from "./WorkspaceIcon";
 
-const WORKSPACE_TILE_COLORS = ["bg-emerald-500", "bg-orange-500", "bg-amber-500", "bg-violet-500", "bg-sky-500", "bg-rose-500"];
+/** The picker selection matching how a workspace currently looks. */
+function currentIconKey(ws: Workspace, index: number): string {
+  if (WORKSPACE_ICONS[ws.icon]) return ws.icon;
+  const v = workspaceVisual(ws, index);
+  if (v.emoji) return v.emoji;
+  return Object.keys(WORKSPACE_ICONS).find((k) => WORKSPACE_ICONS[k] === v.Icon) ?? "folder";
+}
 
-function workspaceVisual(ws: Workspace, index: number): { Icon: LucideIcon; tile: string } {
-  const name = ws.name.toLowerCase();
-  if (name.includes("cansaas") || ws.icon === "#") return { Icon: Hash, tile: "bg-emerald-500" };
-  if (name.includes("marketing") || ws.icon === "📣") return { Icon: Megaphone, tile: "bg-orange-500" };
-  if (name.includes("garden") || ws.icon === "🌱") return { Icon: Leaf, tile: "bg-amber-500" };
-  if (name.includes("social") || ws.icon === "💬") return { Icon: MessageSquare, tile: "bg-violet-500" };
-  return { Icon: FolderOpen, tile: WORKSPACE_TILE_COLORS[index % WORKSPACE_TILE_COLORS.length] };
+function currentColorKey(ws: Workspace, index: number): string {
+  if (ws.color && WORKSPACE_COLORS[ws.color]) return ws.color;
+  const tile = workspaceVisual(ws, index).tile;
+  return Object.keys(WORKSPACE_COLORS).find((k) => WORKSPACE_COLORS[k] === tile) ?? defaultWorkspaceColor(index);
 }
 
 function NavRow({
@@ -78,6 +83,7 @@ export function Sidebar() {
   const setView = useAppStore((s) => s.setView);
   const addWorkspace = useAppStore((s) => s.addWorkspace);
   const renameWorkspace = useAppStore((s) => s.renameWorkspace);
+  const updateWorkspaceIcon = useAppStore((s) => s.updateWorkspaceIcon);
   const updateNote = useAppStore((s) => s.updateNote);
   const notifications = useAppStore((s) => s.notifications);
   const skin = getSkin(useAppStore((s) => s.skinId));
@@ -85,6 +91,9 @@ export function Sidebar() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [newWorkspaceIcon, setNewWorkspaceIcon] = useState({ icon: "folder", color: "emerald" });
+  /** Workspace whose icon picker is open in the list. */
+  const [iconPickerFor, setIconPickerFor] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ kind: "workspace" | "note"; id: string; value: string } | null>(null);
 
   const commitRename = () => {
@@ -128,6 +137,11 @@ export function Sidebar() {
     </span>
   );
 
+  const startNewWorkspace = () => {
+    setNewWorkspaceIcon({ icon: "folder", color: defaultWorkspaceColor(workspaces.length) });
+    setCreatingWorkspace(true);
+  };
+
   const cancelNewWorkspace = () => {
     setCreatingWorkspace(false);
     setNewWorkspaceName("");
@@ -136,7 +150,7 @@ export function Sidebar() {
   const commitNewWorkspace = () => {
     const name = newWorkspaceName.trim();
     if (!name) return cancelNewWorkspace();
-    const id = addWorkspace(name, "📁");
+    const id = addWorkspace(name, newWorkspaceIcon.icon, newWorkspaceIcon.color);
     setView({ kind: "workspace", workspaceId: id });
     cancelNewWorkspace();
   };
@@ -224,7 +238,6 @@ export function Sidebar() {
             const wsNotes = activeNotes.filter((n) => n.workspaceId === ws.id && !n.archived);
             const isOpen = expanded.has(ws.id);
             const active = isActive({ kind: "workspace", workspaceId: ws.id });
-            const { Icon, tile } = workspaceVisual(ws, index);
             return (
               <div key={ws.id}>
                 <button
@@ -248,8 +261,20 @@ export function Sidebar() {
                   >
                     {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                   </span>
-                  <span className={`flex h-5 w-5 items-center justify-center rounded-[6px] ${tile}`}>
-                    <Icon size={12} className="text-white" strokeWidth={2.5} />
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    title="Change icon"
+                    // Keep the picker's outside-click handler from closing it first,
+                    // so a second click on the tile toggles it shut.
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIconPickerFor((cur) => (cur === ws.id ? null : ws.id));
+                    }}
+                    className="rounded-[6px] transition hover:ring-2 hover:ring-black/15"
+                  >
+                    <WorkspaceTile ws={ws} index={index} />
                   </span>
                   {renaming?.kind === "workspace" && renaming.id === ws.id ? (
                     renameInput
@@ -266,6 +291,16 @@ export function Sidebar() {
                   )}
                   {renamePencil("workspace", ws.id, ws.name, "Rename workspace")}
                 </button>
+                {iconPickerFor === ws.id && (
+                  <div className="my-1 ml-6">
+                    <WorkspaceIconPicker
+                      icon={currentIconKey(ws, index)}
+                      color={currentColorKey(ws, index)}
+                      onChange={({ icon, color }) => updateWorkspaceIcon(ws.id, icon, color)}
+                      onClose={() => setIconPickerFor(null)}
+                    />
+                  </div>
+                )}
                 {isOpen && (
                   <div className="ml-[26px] flex flex-col gap-0.5 pl-2">
                     {wsNotes.length === 0 && (
@@ -308,18 +343,28 @@ export function Sidebar() {
             onClick={() => setView({ kind: "all" })}
           />
           {creatingWorkspace ? (
-            <div className="flex items-center gap-1.5 rounded-lg bg-black/[0.04] py-1 pl-2.5 pr-1">
-              <Plus size={15} className="shrink-0 text-slate-400" />
+            <div
+              // Leaving the whole block (not just the name field) cancels, so the
+              // picker's emoji field can take focus without discarding the draft.
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) cancelNewWorkspace();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitNewWorkspace();
+                if (e.key === "Escape") cancelNewWorkspace();
+              }}
+              className="flex flex-col gap-1.5"
+            >
+            <div className="flex items-center gap-1.5 rounded-lg bg-black/[0.04] py-1 pl-2 pr-1">
+              <WorkspaceTile
+                ws={{ id: "new", name: newWorkspaceName, icon: newWorkspaceIcon.icon, color: newWorkspaceIcon.color, order: 0 }}
+                index={workspaces.length}
+              />
               <input
                 autoFocus
                 value={newWorkspaceName}
                 placeholder="Workspace name"
                 onChange={(e) => setNewWorkspaceName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitNewWorkspace();
-                  if (e.key === "Escape") cancelNewWorkspace();
-                }}
-                onBlur={cancelNewWorkspace}
                 className="w-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-slate-700 outline-none placeholder:font-normal placeholder:text-slate-300"
               />
               <button
@@ -334,10 +379,16 @@ export function Sidebar() {
                 Add
               </button>
             </div>
+            <WorkspaceIconPicker
+              icon={newWorkspaceIcon.icon}
+              color={newWorkspaceIcon.color}
+              onChange={setNewWorkspaceIcon}
+            />
+            </div>
           ) : (
             <button
               type="button"
-              onClick={() => setCreatingWorkspace(true)}
+              onClick={startNewWorkspace}
               className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-medium text-slate-400 hover:bg-black/[0.04] hover:text-slate-600"
             >
               <Plus size={15} />
