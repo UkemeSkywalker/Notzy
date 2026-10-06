@@ -116,11 +116,25 @@ function StickyBody({ note }: { note: Note }) {
     >
       <div
         onMouseDown={onHeaderMouseDown}
-        className="group flex h-8 shrink-0 cursor-default select-none items-center gap-1 px-2"
+        className="group flex h-8 shrink-0 cursor-default select-none items-center gap-1 bg-black/[0.05] px-2"
       >
         <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-black/45">
           {note.title || "Sticky note"}
         </span>
+        <div className="hidden shrink-0 items-center gap-1 pr-0.5 group-hover:flex">
+          {(Object.keys(STICKY_BG) as AccentColor[]).map((c) => (
+            <button
+              key={c}
+              type="button"
+              title={`Color: ${c}`}
+              onClick={() => updateNote(note.id, { color: c })}
+              className={`h-3 w-3 rounded-full transition hover:scale-125 ${
+                note.color === c ? "ring-2 ring-black/50" : "ring-1 ring-black/20"
+              }`}
+              style={{ background: STICKY_BG[c] }}
+            />
+          ))}
+        </div>
         <button
           type="button"
           title="Close (keeps the note in Notzy)"
